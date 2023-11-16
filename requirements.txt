@@ -1,0 +1,3 @@
+cryptography
+argparse
+alive_progress
