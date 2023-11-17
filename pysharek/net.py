@@ -2,8 +2,10 @@
 
 import json
 import hashlib
+import os
+import time
 
-from .sup import bytes_to_int, int_to_bytes, plog, Global
+from .sup import bytes_to_int, int_to_bytes, plog, Global, pout
 import socket
 
 
@@ -49,7 +51,15 @@ def recv_msg(conn) -> (dict, bytes):
 
 def socket_create_and_connect(ip: str, port: int) -> socket:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((ip, port))
+    while True:
+        try:
+            sock.connect((ip, port))
+        except ConnectionRefusedError:
+            wait_time = 3
+            plog(f"(socket_create_and_connect) ConnectionRefusedError, waiting {wait_time}")
+            time.sleep(wait_time)
+            continue
+        break
     return sock
 
 
@@ -74,7 +84,45 @@ def pand(bs: bytes, n: int) -> bytes:
     return res
 
 
-def test_net():
+def handshake_as_server(sock: socket) -> bytes:
+    d, iv = recv_msg(sock)
+    if "handshake" not in d or d["handshake"] != "1":
+        plog("ERROR (handshake_as_server): Cannot handshake 1")
+        socket_close(sock)
+        exit()
+    check = hashlib.sha256("handshake".encode("utf-8") + iv).digest()
+    send_msg(sock, {"handshake": "2"}, check)
+    d, check2 = recv_msg(sock)
+    if "handshake" not in d or d["handshake"] != "3":
+        plog("ERROR (handshake_as_server): Cannot handshake 2")
+        socket_close(sock)
+        exit()
+    if check2 != b"OK":
+        plog("ERROR (handshake_as_server): not b\"OK\" msg received")
+        socket_close(sock)
+        exit()
+    return hashlib.sha256(iv).digest()[:16]
+
+
+def handshake_as_client(sock: socket) -> bytes:
+    iv = os.urandom(16)
+    send_msg(sock, {"handshake": "1"}, iv)
+    check = hashlib.sha256("handshake".encode("utf-8") + iv).digest()
+    d, check2 = recv_msg(sock)
+    if "handshake" not in d or d["handshake"] != "2":
+        plog("ERROR (handshake_as_client): Cannot handshake 1")
+        socket_close(sock)
+        exit()
+    if check != check2:
+        plog("ERROR (handshake_as_client): hashes does not match!")
+        socket_close(sock)
+        exit()
+    else:
+        send_msg(sock, {"handshake": "3"}, b"OK")
+    return hashlib.sha256(iv).digest()[:16]
+
+
+def test_net_1():
     import sys
     if len(sys.argv) == 2:
         file = sys.argv[1]
@@ -89,5 +137,18 @@ def test_net():
         with open("/tmp/test_file.bin", "wb") as fd:
             fd.write(bs)
             fd.flush()
+
+    socket_close(sock)
+
+
+def test_net_2():
+    import sys
+    if sys.argv[1] == "1":
+        sock = socket_create_and_connect("127.0.0.1", 8882)
+        iv = handshake_as_client(sock)
+    else:
+        sock = socket_create_and_listen(8882)
+        iv = handshake_as_server(sock)
+    print(iv)
 
     socket_close(sock)

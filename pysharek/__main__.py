@@ -12,8 +12,8 @@ from .net import *
 
 
 if __name__ == "__main__":
-    Global.version = "0.02"
-    test_net()
+    Global.version = "0.03"
+    test_net_2()
 
 
 
