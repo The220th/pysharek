@@ -3,7 +3,7 @@
 import base64
 import hashlib
 
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -67,6 +67,9 @@ class PycaAES256CBC:
 
     def encrypt(self, bs: bytes) -> bytes or None:
         if self.is_started():
+            padder = padding.PKCS7(algorithms.AES256.block_size).padder()
+            bs = padder.update(bs) + padder.finalize()
+
             encryptor = self.cipher.encryptor()
             ct = encryptor.update(bs) + encryptor.finalize()
             return ct
@@ -77,6 +80,9 @@ class PycaAES256CBC:
         if self.is_started():
             decryptor = self.cipher.decryptor()
             bs = decryptor.update(ct) + decryptor.finalize()
+
+            unpadder = padding.PKCS7(algorithms.AES256.block_size).unpadder()
+            bs = unpadder.update(bs) + unpadder.finalize()
             return bs
         else:
             return None

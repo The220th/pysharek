@@ -39,10 +39,10 @@ def send_crypto_msg(conn, js: dict, bs: bytes):
     js_len, bs_len = len(js), len(bs)
     js_len_b, bs_len_b = int_to_bytes(js_len), int_to_bytes(bs_len)
     msg = js_len_b + js + bs_len_b + bs
+    msg_hash = hashlib.sha256(msg).digest()
 
     msg = Global.cipher.encrypt(msg)
 
-    msg_hash = hashlib.sha256(msg).digest()
     msg_len_b = int_to_bytes(len(msg) + msg_hash_len)
     msg = msg_len_b + msg + msg_hash
 
