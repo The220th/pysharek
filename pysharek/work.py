@@ -60,6 +60,7 @@ def challenge_cipher(sock: socket):
         socket_close(sock)
         exit()
 
+
 def build_dir_meta(dir_path: str) -> dict:
     dir_path = os.path.abspath(dir_path)
     files = get_files_list(dir_path)
@@ -71,4 +72,3 @@ def build_dir_meta(dir_path: str) -> dict:
         d[file_i] = {"size": get_file_size(file_i), "time": get_file_time(file_i)}
 
     return d
-

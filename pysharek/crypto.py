@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import os
 
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -60,7 +61,8 @@ class PycaAES256CBC:
         self.iv = iv
 
     def start(self):
-        self.cipher = Cipher(algorithms.AES(self.key), modes.CBC(self.iv))
+        mod_iv = hashlib.sha256(self.iv + hashlib.sha256(self.key).digest()).digest()[:16]
+        self.cipher = Cipher(algorithms.AES(self.key), modes.CBC(mod_iv))
 
     def is_started(self) -> bool:
         return self.cipher is not None
@@ -86,3 +88,64 @@ class PycaAES256CBC:
             return bs
         else:
             return None
+
+
+# https://stackoverflow.com/questions/66476150/fast-concatenation-of-bytes-in-python3
+def inject_salt(data: bytes) -> bytes:
+    salt_prop = 3
+    if len(data) == 0:
+        # print(0, 1, 1)
+        return os.urandom(1)
+    salt_slots = 1 + len(data) // salt_prop
+    salts = os.urandom(salt_slots)
+    len_res = len(data) + salt_slots
+    # print(len(data), salt_slots, len_res)
+    res = bytearray(len_res)
+    i, j, k = 0, 0, 0
+    while j < len(res):
+        if i % salt_prop == 0:
+            res[j] = salts[k]
+            j += 1
+            k += 1
+            if j >= len(res):
+                break
+        res[j] = data[i]
+        i += 1
+        j += 1
+    return bytes(res)
+
+
+def takeout_salt(data: bytes) -> bytes:
+    salt_prop = 3
+    # data_slots = ((len(data)-1)*salt_prop)//(salt_prop+1)
+    data_slots = (len(data)-1) % (salt_prop+1)
+    data_slots = ((len(data)-1-data_slots)//(salt_prop+1))*salt_prop + data_slots
+    salt_slots = 1 + data_slots // salt_prop
+    # print(data_slots, salt_slots, len(data))
+    res = bytearray(data_slots)
+    i, j, c = 0, 1, 1
+    while i < len(res):
+        res[i] = data[j]
+        if c >= salt_prop:
+            j += 1
+            c = 0
+        c += 1
+        i += 1
+        j += 1
+    return bytes(res)
+
+
+def __test_salt():
+    import random
+    from alive_progress import alive_bar
+    with alive_bar(1000) as bar:
+        for i in range(1000):
+            data_i = os.urandom(random.randint(10**6, 10**7))
+            salted_i = inject_salt(data_i)
+            unsalted_i = takeout_salt(salted_i)
+            assert data_i == unsalted_i
+            bar()
+
+
+if __name__ == "__main__":
+    __test_salt()

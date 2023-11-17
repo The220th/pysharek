@@ -15,7 +15,7 @@ from .crypto import PycaAES256CBC
 
 
 if __name__ == "__main__":
-    Global.version = "0.03"
+    Global.version = "0.04"
     Global.cipher = PycaAES256CBC()
 
     parser = create_and_init_parser()
