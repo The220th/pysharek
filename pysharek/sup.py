@@ -11,7 +11,9 @@ class Global:
     version = None
     outfile = None
     logfile = None
-    message_file_size = 1048576  # 1 MB
+    file_dir = None
+    cipher: "PycaAES256CBC" = None
+    file_size_4_message = 1048576  # 1 MB
 
 
 def pout(msg: str, endl=True):
@@ -39,6 +41,19 @@ def plog(s: str):
 
 def get_files_list(dir_path: str) -> list:
     return [os.path.join(path, name) for path, subdirs, files in os.walk(dir_path) for name in files]
+
+
+def get_dirs_needed_for_files(files: list) -> list:
+    dirs = set()
+    for file_i in files:
+        dir_i = os.path.dirname(file_i)
+        dirs.add(dir_i)
+    dirs = sorted(list(dirs))
+    return dirs
+
+
+def mkdir_with_p(path: str):
+    os.makedirs(path, exist_ok=True)
 
 
 def get_file_size(file: str) -> int:

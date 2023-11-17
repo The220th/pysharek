@@ -7,6 +7,7 @@ import time
 
 from .sup import bytes_to_int, int_to_bytes, plog, Global, pout
 import socket
+from .crypto import PycaAES256CBC
 
 
 def print_bytes(bs: bytes):
@@ -19,11 +20,28 @@ def print_bytes(bs: bytes):
 
 def send_msg(conn, js: dict, bs: bytes):
     msg_hash_len = 32  # sha256
-    # buff_size = Global.message_file_size
     js = json.dumps(js).encode("utf-8")
     js_len, bs_len = len(js), len(bs)
     js_len_b, bs_len_b = int_to_bytes(js_len), int_to_bytes(bs_len)
     msg = js_len_b + js + bs_len_b + bs
+    msg_hash = hashlib.sha256(msg).digest()
+    msg_len_b = int_to_bytes(len(msg) + msg_hash_len)
+    msg = msg_len_b + msg + msg_hash
+
+    buff = conn.send(msg)
+
+
+def send_crypto_msg(conn, js: dict, bs: bytes):
+    assert Global.cipher.is_started()
+
+    msg_hash_len = 32  # sha256
+    js = json.dumps(js).encode("utf-8")
+    js_len, bs_len = len(js), len(bs)
+    js_len_b, bs_len_b = int_to_bytes(js_len), int_to_bytes(bs_len)
+    msg = js_len_b + js + bs_len_b + bs
+
+    msg = Global.cipher.encrypt(msg)
+
     msg_hash = hashlib.sha256(msg).digest()
     msg_len_b = int_to_bytes(len(msg) + msg_hash_len)
     msg = msg_len_b + msg + msg_hash
@@ -42,6 +60,29 @@ def recv_msg(conn) -> (dict, bytes):
     bs_size = bytes_to_int(msg[4+js_size:4+js_size+4])
     bs = msg[4+js_size+4:4+js_size+4+bs_size]
     msg_hash = msg[4+js_size+4+bs_size:]
+    control_hash = hashlib.sha256(msg[:4+js_size+4+bs_size]).digest()
+    if msg_hash != control_hash:
+        return None
+    else:
+        return (js, bs)
+
+
+def recv_crypto_msg(conn) -> (dict, bytes):
+    assert Global.cipher.is_started()
+
+    msg_hash_len = 32  # sha256
+    msg_size = conn.recv(4, socket.MSG_WAITALL)
+    msg_size = bytes_to_int(msg_size)
+    msg_and_hash = conn.recv(msg_size, socket.MSG_WAITALL)
+    msg, msg_hash = msg_and_hash[:-msg_hash_len], msg_and_hash[-msg_hash_len:]
+
+    msg = Global.cipher.decrypt(msg)
+
+    js_size = bytes_to_int(msg[:4])
+    js = msg[4:4+js_size]
+    js = json.loads(js.decode("utf-8"))
+    bs_size = bytes_to_int(msg[4+js_size:4+js_size+4])
+    bs = msg[4+js_size+4:4+js_size+4+bs_size]
     control_hash = hashlib.sha256(msg[:4+js_size+4+bs_size]).digest()
     if msg_hash != control_hash:
         return None
@@ -84,7 +125,7 @@ def pand(bs: bytes, n: int) -> bytes:
     return res
 
 
-def handshake_as_server(sock: socket) -> bytes:
+def handshake_as_server(sock: socket):
     d, iv = recv_msg(sock)
     if "handshake" not in d or d["handshake"] != "1":
         plog("ERROR (handshake_as_server): Cannot handshake 1")
@@ -101,10 +142,11 @@ def handshake_as_server(sock: socket) -> bytes:
         plog("ERROR (handshake_as_server): not b\"OK\" msg received")
         socket_close(sock)
         exit()
-    return hashlib.sha256(iv).digest()[:16]
+    iv = hashlib.sha256(iv).digest()[:16]
+    Global.cipher.set_iv(iv)
 
 
-def handshake_as_client(sock: socket) -> bytes:
+def handshake_as_client(sock: socket):
     iv = os.urandom(16)
     send_msg(sock, {"handshake": "1"}, iv)
     check = hashlib.sha256("handshake".encode("utf-8") + iv).digest()
@@ -119,7 +161,8 @@ def handshake_as_client(sock: socket) -> bytes:
         exit()
     else:
         send_msg(sock, {"handshake": "3"}, b"OK")
-    return hashlib.sha256(iv).digest()[:16]
+    iv = hashlib.sha256(iv).digest()[:16]
+    Global.cipher.set_iv(iv)
 
 
 def test_net_1():
@@ -145,10 +188,9 @@ def test_net_2():
     import sys
     if sys.argv[1] == "1":
         sock = socket_create_and_connect("127.0.0.1", 8882)
-        iv = handshake_as_client(sock)
+        handshake_as_client(sock)
     else:
         sock = socket_create_and_listen(8882)
-        iv = handshake_as_server(sock)
-    print(iv)
+        handshake_as_server(sock)
 
     socket_close(sock)
