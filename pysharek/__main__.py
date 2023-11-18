@@ -7,7 +7,7 @@ base_dir = os.path.dirname(__file__)
 sys.path.insert(0, base_dir)
 
 from .hashes_work import calc_hash_dir
-from .sup import Global, pout
+from .sup import *
 from .net import *
 from .args import *
 from .work import work_as_sender, work_as_receiver
@@ -15,11 +15,12 @@ from .crypto import PycaAES256CBC, PycaFernet
 
 
 if __name__ == "__main__":
-    Global.version = "0.07"
+    Global.version = "0.08"
 
     parser = create_and_init_parser()
     args = parser.parse_args(sys.argv[1:])
     common_parse(args)
+    plog("Begin pysharek", 1)
 
     if args.cipher == 1:
         Global.cipher = PycaFernet()

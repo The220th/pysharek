@@ -16,6 +16,9 @@ def create_and_init_parser() -> "argparse.ArgumentParser":
     parser.add_argument("--log_file", type=str, default=None, required=False,
                         help="Duplicate program output to file")
 
+    parser.add_argument("--log_debug", default=False, required=False, action='store_true',
+                        help="if \"log_file\" defined, lvl DEBUG will be logged")
+
     parser.add_argument("--version", action="version", version=f"V{Global.version}",
                         help="Check version of diwork")
 
@@ -44,3 +47,4 @@ def create_and_init_parser() -> "argparse.ArgumentParser":
 def common_parse(args: "argparse.Namespace") -> None:
     Global.outfile = args.dublicate_out_to_file
     Global.logfile = args.log_file
+    Global.log_debug = args.log_debug

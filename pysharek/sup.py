@@ -12,7 +12,9 @@ class Global:
     version = None
     outfile = None
     logfile = None
+    log_debug = None
     file_dir = None
+    sock: "socket" = None
     cipher: "PycaAES256CBC or PycaFernet" = None
     file_size_4_message = 262144  # 256 KB  # 1048576  # 1 MB
 
@@ -30,14 +32,35 @@ def pout_low(msg: str):
         with open(Global.outfile, "a", encoding="utf-8") as fd:
             fd.write(msg)
             fd.flush()
+    # if Global.logfile is not None:
+    #     with open(Global.logfile, "a", encoding="utf-8") as fd:
+    #         fd.write(msg)
+    #         fd.flush()
+    plog(msg, 5)
 
 
-def plog(s: str):
+def plog(s: str, _type: int = 1):
+    prefix = "UNKNOWN"
+    if _type == 0:
+        prefix = ""
+    elif _type == 1:
+        prefix = "INFO"
+    elif _type == 2:
+        prefix = "WARNING"
+    elif _type == 3:
+        prefix = "ERROR"
+    elif _type == 4:
+        prefix = "DEBUG"
+    elif _type == 5:
+        prefix = "OUTPUT"
     if Global.logfile is not None:
-        time_str = datetime.datetime.now().strftime("[%y.%m.%d %H:%M:%S.%f]")
-        with open(Global.logfile, "a", encoding="utf-8") as fd:
-            fd.write(f"{time_str} {s}")
-            fd.flush()
+        if not Global.log_debug and prefix == "DEBUG":
+            return
+        else:
+            time_str = datetime.datetime.now().strftime("[%y.%m.%d %H:%M:%S.%f]")
+            with open(Global.logfile, "a", encoding="utf-8") as fd:
+                fd.write(f"{time_str} ({prefix}) {s}\n")
+                fd.flush()
 
 
 def get_files_list(dir_path: str) -> list:

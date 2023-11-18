@@ -4,6 +4,7 @@ import json
 import hashlib
 import os
 import time
+from alive_progress import alive_bar
 
 from .sup import bytes_to_int, int_to_bytes, plog, Global, pout
 import socket
@@ -129,18 +130,18 @@ def pand(bs: bytes, n: int) -> bytes:
 def handshake_as_server(sock: socket):
     d, iv = recv_msg(sock)
     if "handshake" not in d or d["handshake"] != "1":
-        plog("ERROR (handshake_as_server): Cannot handshake 1")
+        plog("(handshake_as_server): Cannot handshake 1", 3)
         socket_close(sock)
         exit()
     check = hashlib.sha256("handshake".encode("utf-8") + iv).digest()
     send_msg(sock, {"handshake": "2"}, check)
     d, check2 = recv_msg(sock)
     if "handshake" not in d or d["handshake"] != "3":
-        plog("ERROR (handshake_as_server): Cannot handshake 2")
+        plog("(handshake_as_server): Cannot handshake 2", 3)
         socket_close(sock)
         exit()
     if check2 != b"OK":
-        plog("ERROR (handshake_as_server): not b\"OK\" msg received")
+        plog("(handshake_as_server): not b\"OK\" msg received", 3)
         socket_close(sock)
         exit()
     iv = hashlib.sha256(iv).digest()[:16]
@@ -153,11 +154,11 @@ def handshake_as_client(sock: socket):
     check = hashlib.sha256("handshake".encode("utf-8") + iv).digest()
     d, check2 = recv_msg(sock)
     if "handshake" not in d or d["handshake"] != "2":
-        plog("ERROR (handshake_as_client): Cannot handshake 1")
+        plog("(handshake_as_client): Cannot handshake 1", 3)
         socket_close(sock)
         exit()
     if check != check2:
-        plog("ERROR (handshake_as_client): hashes does not match!")
+        plog("(handshake_as_client): hashes does not match!", 3)
         socket_close(sock)
         exit()
     else:
