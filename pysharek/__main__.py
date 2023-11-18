@@ -15,7 +15,7 @@ from .crypto import PycaAES256CBC, PycaFernet
 
 
 if __name__ == "__main__":
-    Global.version = "0.08"
+    Global.version = "0.09"
 
     parser = create_and_init_parser()
     args = parser.parse_args(sys.argv[1:])

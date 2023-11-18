@@ -10,9 +10,12 @@ import hashlib
 from .sup import *
 from .net import *
 from .crypto import PycaAES256CBC
+from .hashes_work import calc_hash_file
 
 
 def work_as_sender(args: "argparse.Namespace"):
+    # python -m pysharek --mode send --connect server --port 1337
+    #                           --password 123 /tmp/123.mp4 --log_file /tmp/log2.txt --log_debug
     plog("I am sender", 1)
     common_block_of_sender_and_receiver(args)
     file = Global.file_dir
@@ -32,14 +35,15 @@ def work_as_sender(args: "argparse.Namespace"):
 
 
 def send_file(file_name: str):
+    file = os.path.abspath(file_name)
     plog("File (not dir) will be sended", 1)
     sock = Global.sock
-    meta = build_file_meta(file_name)
+    meta = build_file_meta(file)
     plog(f"meta={meta}", 4)
     plog("Sending meta...", 1)
     send_crypto_msg(sock, meta, b"")
     plog("Meta sended!", 1)
-    with open(file_name, "rb") as fd:
+    with open(file, "rb") as fd:
         file_size = meta["file"]["size"]
         plog(f"File size {file_size} bytes", 4)
         readed = 0
@@ -51,7 +55,7 @@ def send_file(file_name: str):
             readed += len(file_buffer)
             while len(file_buffer) > 0:
                 while True:
-                    js_send = {"type": "sending", "file_count": 0, "slice": readed}
+                    js_send = {"type": "sending", "file_count": 1, "slice": readed}
                     plog(f"Sendeding: {js_send} + data", 4)
                     send_crypto_msg(sock, js_send, file_buffer)
                     plog(f"Sended", 4)
@@ -65,12 +69,23 @@ def send_file(file_name: str):
                 bar(len(file_buffer))
                 readed += len(file_buffer)
 
+    pout(f"Calculating hash...")
+    file_hash = calc_hash_file(file)
+    pout(f"\"{file_hash}\" is hash of file=\"{file}\"")
+    plog(f"Sending file hash", 1)
+    hash_msg = {"type": "hash", "file_num": 1, "hash": f"{file_hash}"}
+    plog(f"Hash message={hash_msg}", 4)
+    send_crypto_msg(sock, hash_msg, b"")
+    plog(f"Hash message sended", 4)
+
 
 def send_dir(dir_name: str):
     pass
 
 
 def work_as_receiver(args: "argparse.Namespace"):
+    # python -m pysharek --mode receive --connect client --ip 127.0.0.1 --port 1337
+    #                               --password 123 /tmp/333/1234.mp4 --log_file /tmp/log1.txt --log_debug
     plog("I am receiver", 1)
     common_block_of_sender_and_receiver(args)
     file = Global.file_dir
@@ -140,6 +155,20 @@ def receive_file(file_name: str, meta: dict):
                     fd.flush()
                     bar(len(file_buffer))
                     break
+    pout(f"Receiving and calculating hash...")
+    js, trash = recv_crypto_msg(sock)
+    if "type" not in js or js["type"] != "hash":
+        pout(f"Cannot receive hash. Exiting")
+        Global.sock.close()
+        exit()
+    recv_hash = js["hash"]
+    pout(f"\"{recv_hash}\" is received hash")
+    file_hash = calc_hash_file(file)
+    pout(f"\"{file_hash}\" is hash of file=\"{file}\"")
+    if recv_hash != file_hash:
+        pout(f"{'='*15} HASHES DOES NOT MATCH!!! {'='*15}")
+    else:
+        pout(f"Hashes matched. All is OK!")
 
 
 def receive_dir(dir_name: str, meta: dict):
