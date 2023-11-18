@@ -11,16 +11,23 @@ from .sup import Global, pout
 from .net import *
 from .args import *
 from .work import work_as_sender, work_as_receiver
-from .crypto import PycaAES256CBC
+from .crypto import PycaAES256CBC, PycaFernet
 
 
 if __name__ == "__main__":
-    Global.version = "0.04"
-    Global.cipher = PycaAES256CBC()
+    Global.version = "0.05"
 
     parser = create_and_init_parser()
     args = parser.parse_args(sys.argv[1:])
     common_parse(args)
+
+    if args.cipher == 1:
+        Global.cipher = PycaFernet()
+    elif args.cipher == 2:
+        Global.cipher = PycaAES256CBC()
+    else:
+        pout("Failed successfully (cipher 1 or cipher 2)")
+        exit()
 
     Global.file_dir = args.file[0]
     if args.mode == "send":

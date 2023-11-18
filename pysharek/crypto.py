@@ -107,7 +107,7 @@ class PycaFernet:
     # Second set password and iv:
     ``` python
     cipher.set_passwort("Your strong🤡 utf-8 password")
-    cipher.set_iv(os.urandom(16)) # =)
+    cipher.set_iv(os.urandom(16))  # =)
     ```
 
     # Third start cipher:
@@ -196,7 +196,7 @@ def takeout_salt(data: bytes) -> bytes:
     # data_slots = ((len(data)-1)*salt_prop)//(salt_prop+1)
     data_slots = (len(data)-1) % (salt_prop+1)
     data_slots = ((len(data)-1-data_slots)//(salt_prop+1))*salt_prop + data_slots
-    salt_slots = 1 + data_slots // salt_prop
+    # salt_slots = 1 + data_slots // salt_prop
     # print(data_slots, salt_slots, len(data))
     res = bytearray(data_slots)
     i, j, c = 0, 1, 1

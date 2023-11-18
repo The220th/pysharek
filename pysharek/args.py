@@ -25,6 +25,9 @@ def create_and_init_parser() -> "argparse.ArgumentParser":
     parser.add_argument("--mode", type=str, choices=["send", "receive"], required=True,
                         help="Usage as sender or receiver")
 
+    parser.add_argument("--cipher", type=int, choices=[1, 2], required=False, default=1,
+                        help="Choose what cipher will be used. PycaFernet (1) or PycaAES256CBC (2). Default 1")
+
     parser.add_argument("--ip", type=str, default=None,
                         help="If connect=\"client\", define ip to connect")
 
