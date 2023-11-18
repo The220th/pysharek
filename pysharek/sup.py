@@ -5,6 +5,7 @@ import sys
 import io
 import json
 import datetime
+import random
 
 
 class Global:
@@ -12,8 +13,8 @@ class Global:
     outfile = None
     logfile = None
     file_dir = None
-    cipher: "PycaAES256CBC" = None
-    file_size_4_message = 1048576  # 1 MB
+    cipher: "PycaAES256CBC or PycaFernet" = None
+    file_size_4_message = 262144  # 256 KB  # 1048576  # 1 MB
 
 
 def pout(msg: str, endl=True):
@@ -109,6 +110,12 @@ def utf8_to_bytes(s: str) -> bytes:
 
 def bytes_to_utf8(bs: bytes) -> str:
     return str(bs, "utf-8")
+
+
+def get_random_string(_lenght : int = 20) -> str:
+    import string
+    S = ''.join(random.choices(string.ascii_uppercase + string.digits, k=_lenght))
+    return S
 
 
 def get_nice_size(size_bytes: int) -> str:
