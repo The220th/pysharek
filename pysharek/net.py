@@ -39,9 +39,9 @@ def send_crypto_msg(conn, js: dict, bs: bytes):
     js_len, bs_len = len(js), len(bs)
     js_len_b, bs_len_b = int_to_bytes(js_len), int_to_bytes(bs_len)
     msg = js_len_b + js + bs_len_b + bs
-    msg_hash = hashlib.sha256(msg).digest()
 
     msg = Global.cipher.encrypt(msg)
+    msg_hash = hashlib.sha256(msg).digest()
 
     msg_len_b = int_to_bytes(len(msg) + msg_hash_len)
     msg = msg_len_b + msg + msg_hash
@@ -75,6 +75,7 @@ def recv_crypto_msg(conn) -> (dict, bytes):
     msg_size = bytes_to_int(msg_size)
     msg_and_hash = conn.recv(msg_size, socket.MSG_WAITALL)
     msg, msg_hash = msg_and_hash[:-msg_hash_len], msg_and_hash[-msg_hash_len:]
+    control_hash = hashlib.sha256(msg).digest()
 
     msg = Global.cipher.decrypt(msg)
 
@@ -83,7 +84,7 @@ def recv_crypto_msg(conn) -> (dict, bytes):
     js = json.loads(js.decode("utf-8"))
     bs_size = bytes_to_int(msg[4+js_size:4+js_size+4])
     bs = msg[4+js_size+4:4+js_size+4+bs_size]
-    control_hash = hashlib.sha256(msg[:4+js_size+4+bs_size]).digest()
+    # control_hash = hashlib.sha256(msg[:4+js_size+4+bs_size]).digest()
     if msg_hash != control_hash:
         return None
     else:
