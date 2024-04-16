@@ -73,6 +73,7 @@ def get_dirs_needed_for_files(files: list) -> list:
         dir_i = os.path.dirname(file_i)
         dirs.add(dir_i)
     dirs = sorted(list(dirs))
+    dirs = list(set(dirs))
     return dirs
 
 

@@ -6,7 +6,7 @@ import sys
 base_dir = os.path.dirname(__file__)
 sys.path.insert(0, base_dir)
 
-from .hashes_work import calc_hash_dir
+
 from .sup import *
 from .net import *
 from .args import *
@@ -15,7 +15,7 @@ from .crypto import PycaAES256CBC, PycaFernet
 
 
 if __name__ == "__main__":
-    Global.version = "0.09"
+    Global.version = "0.10"
 
     parser = create_and_init_parser()
     args = parser.parse_args(sys.argv[1:])

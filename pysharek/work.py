@@ -11,6 +11,8 @@ from .sup import *
 from .net import *
 from .crypto import PycaAES256CBC
 from .hashes_work import calc_hash_file
+from .hashes_work import calc_hash_dir
+from .sup import get_dirs_needed_for_files
 
 
 def work_as_sender(args: "argparse.Namespace"):
@@ -36,7 +38,7 @@ def work_as_sender(args: "argparse.Namespace"):
 
 def send_file(file_name: str):
     file = os.path.abspath(file_name)
-    plog("File (not dir) will be sended", 1)
+    plog(f"File (not dir) \"{file}\" will be sended", 1)
     sock = Global.sock
     meta = build_file_meta(file)
     plog(f"meta={meta}", 4)
@@ -80,7 +82,53 @@ def send_file(file_name: str):
 
 
 def send_dir(dir_name: str):
-    pass
+    dir_name = os.path.abspath(dir_name)
+    plog(f"Dir \"{dir_name}\" will be sended", 1)
+    meta = build_dir_meta(dir_name)
+    files = sorted(meta["files"].keys())
+    for file_i in files:
+        file = os.path.join(dir_name, file_i)
+        sock = Global.sock
+        plog(f"meta={meta}", 4)
+        plog("Sending meta...", 1)
+        send_crypto_msg(sock, meta, b"")
+        plog("Meta sended!", 1)
+        with alive_bar(meta["dir_size"]) as bar:
+            with open(file, "rb") as fd:
+                file_size = meta["files"][file_i]["size"]
+                plog(f"File size {file_size} bytes", 4)
+                readed = 0
+                with alive_bar(file_size) as bar_file:
+                    block_size = Global.file_size_4_message
+                    file_buffer = fd.read(block_size)
+                    bar(len(file_buffer)-1)  # I do not know why need -1?!
+                    bar_file(len(file_buffer)-1)
+                    readed += len(file_buffer)
+                    while len(file_buffer) > 0:
+                        while True:
+                            js_send = {"type": "sending", "file_count": 1, "slice": readed}
+                            plog(f"Sendeding: {js_send} + data", 4)
+                            send_crypto_msg(sock, js_send, file_buffer)
+                            plog(f"Sended", 4)
+                            js, bs = recv_crypto_msg(sock)
+                            plog(f"Received js={js}", 4)
+                            if "type" not in js or js["type"] != "received":
+                                pout("Cannot send block. Trying again.")
+                            else:
+                                break
+                        file_buffer = fd.read(block_size)
+                        bar(len(file_buffer))
+                        bar(len(file_buffer))
+                        readed += len(file_buffer)
+
+        pout(f"Calculating hash...")
+        dir_hash = calc_hash_dir(dir_name)
+        pout(f"\"{dir_hash}\" is hash of dir \"{dir_name}\"")
+        plog(f"Sending file hash", 1)
+        hash_msg = {"type": "hash", "hash": f"{dir_hash}"}
+        plog(f"Hash message={hash_msg}", 4)
+        send_crypto_msg(sock, hash_msg, b"")
+        plog(f"Hash message sended", 4)
 
 
 def work_as_receiver(args: "argparse.Namespace"):
@@ -172,7 +220,60 @@ def receive_file(file_name: str, meta: dict):
 
 
 def receive_dir(dir_name: str, meta: dict):
-    pass
+    # TODO: check if dir exists and if this not empty
+    dir_name = os.path.abspath(dir_name)
+    plog(f"Dir will be received", 1)
+    sock = Global.sock
+    files = sorted(meta["files"].keys())
+    # !!! os.path.join
+    needed_dirs = get_dirs_needed_for_files(files)
+    for needed_dir_i in needed_dirs:
+        mkdir_with_p(needed_dir_i)
+    for file_i in files:
+        file_name = os.path.join(dir_name, file_i)
+        with alive_bar(meta["dir_size"]) as bar:
+            with open(file_name, "wb") as fd:
+                writed = 0
+                file_size = meta["files"][file_i]["size"]
+                plog(f"Receiving file size={file_size}", 1)
+                with alive_bar(file_size) as bar_file:
+                    while writed != file_size:
+                        while True:
+                            plog("Receiving file block", 4)
+                            js, file_buffer = recv_crypto_msg(sock)
+                            plog(f"Received file block {len(file_buffer)} bytes, js={js}", 4)
+                            if "type" not in js or js["type"] != "sending":
+                                pout(f"Cannot receive. Requesting the block again.")
+                                send_crypto_msg(sock, {"type": "error_again"}, b"")
+                                continue
+                            writed += len(file_buffer)
+                            if js["slice"] != writed:
+                                pout(f"Slice {js['slice']} dont same with writed {writed}. Exiting")
+                                Global.sock.close()
+                                exit()
+                            answer = {"type": "received"}
+                            plog(f"Sending answer={answer}", 4)
+                            send_crypto_msg(sock, answer, b"")
+                            plog(f"Sended", 4)
+                            fd.write(file_buffer)
+                            fd.flush()
+                            bar_file(len(file_buffer))
+                            bar(len(file_buffer))
+                            break
+    pout(f"Receiving and calculating hash...")
+    js, trash = recv_crypto_msg(sock)
+    if "type" not in js or js["type"] != "hash":
+        pout(f"Cannot receive hash. Exiting")
+        Global.sock.close()
+        exit()
+    recv_hash = js["hash"]
+    pout(f"\"{recv_hash}\" is received hash")
+    dir_hash = calc_hash_dir(dir_name)
+    pout(f"\"{dir_hash}\" is hash of dir=\"{dir_name}\"")
+    if recv_hash != dir_hash:
+        pout(f"{'='*15} HASHES DOES NOT MATCH!!! {'='*15}")
+    else:
+        pout(f"Hashes matched. All is OK!")
 
 
 def common_block_of_sender_and_receiver(args: "argparse.Namespace"):
@@ -234,7 +335,13 @@ def build_dir_meta(dir_path: str) -> dict:
 
     d = {"mode": 2, "files": {}}
     for file_i in files:
-        d["files"][file_i] = {"size": get_file_size(file_i), "time": get_file_time(file_i)}
+        src_file_i = os.path.join(dir_path, file_i)
+        d["files"][file_i] = {"size": get_file_size(src_file_i), "time": get_file_time(src_file_i)}
+
+    dir_size = 0
+    for file_i in d["files"]:
+        dir_size += d["files"][file_i]["size"]
+    d["dir_size"] = dir_size
 
     return d
 
