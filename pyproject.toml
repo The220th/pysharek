@@ -22,6 +22,10 @@ dependencies = [
     "alive_progress"
 ]
 
+# [metadata]
+# version = attr: package.version.__version__
+# https://github.com/pypa/setuptools/issues/2530#issuecomment-1135391647
+
 # [console_scripts]
 [project.scripts]
 pysharek = "pysharek.main:main"
