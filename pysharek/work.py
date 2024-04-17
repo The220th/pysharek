@@ -14,8 +14,6 @@ from .hashes_work import calc_hash_file
 from .hashes_work import calc_hash_dir
 from .sup import get_dirs_needed_for_files
 
-from tqdm import tqdm
-
 
 def work_as_sender(args: "argparse.Namespace"):
     # python -m pysharek --mode send --connect server --port 1337

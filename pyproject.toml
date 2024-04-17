@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pysharek"
+version = "0.10.0"
+authors = [
+  { name="The220th", email="author@example.com" },
+]
+description = "Share file with encryption and hash checking"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "cryptography",
+    "argparse",
+    "alive_progress"
+]
+
+# [console_scripts]
+[project.scripts]
+pysharek = "pysharek.main:main"
+# my_script = "my_package.my_module:main"
+# https://packaging.python.org/en/latest/specifications/entry-points/#use-for-scripts
+
+[project.urls]
+Homepage = "https://github.com/The220th/pysharek"
+Issues = "https://github.com/The220th/pysharek/issues"
