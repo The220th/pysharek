@@ -14,6 +14,8 @@ from .hashes_work import calc_hash_file
 from .hashes_work import calc_hash_dir
 from .sup import get_dirs_needed_for_files
 
+from tqdm import tqdm
+
 
 def work_as_sender(args: "argparse.Namespace"):
     # python -m pysharek --mode send --connect server --port 1337
@@ -86,40 +88,39 @@ def send_dir(dir_name: str):
     plog(f"Dir \"{dir_name}\" will be sended", 1)
     meta = build_dir_meta(dir_name)
     files = sorted(meta["files"].keys())
-    for file_i in files:
-        file = os.path.join(dir_name, file_i)
-        sock = Global.sock
-        plog(f"meta={meta}", 4)
-        plog("Sending meta...", 1)
-        send_crypto_msg(sock, meta, b"")
-        plog("Meta sended!", 1)
-        with alive_bar(meta["dir_size"]) as bar:
+    sock = Global.sock
+    plog(f"meta={meta}", 4)
+    plog("Sending meta...", 1)
+    send_crypto_msg(sock, meta, b"")
+    plog("Meta sended!", 1)
+    with alive_bar(meta["dir_size"]) as bar:
+        for file_i in files:
+            # print(file_i)
+            # input()
+            file = os.path.join(dir_name, file_i)
             with open(file, "rb") as fd:
                 file_size = meta["files"][file_i]["size"]
                 plog(f"File size {file_size} bytes", 4)
                 readed = 0
-                with alive_bar(file_size) as bar_file:
-                    block_size = Global.file_size_4_message
+                block_size = Global.file_size_4_message
+                file_buffer = fd.read(block_size)
+                bar(len(file_buffer)-1)  # I do not know why need -1?!
+                readed += len(file_buffer)
+                while len(file_buffer) > 0:
+                    while True:
+                        js_send = {"type": "sending", "file_count": 1, "slice": readed}
+                        plog(f"Sendeding: {js_send} + data", 4)
+                        send_crypto_msg(sock, js_send, file_buffer)
+                        plog(f"Sended", 4)
+                        js, bs = recv_crypto_msg(sock)
+                        plog(f"Received js={js}", 4)
+                        if "type" not in js or js["type"] != "received":
+                            pout("Cannot send block. Trying again.")
+                        else:
+                            break
                     file_buffer = fd.read(block_size)
-                    bar(len(file_buffer)-1)  # I do not know why need -1?!
-                    bar_file(len(file_buffer)-1)
+                    bar(len(file_buffer))
                     readed += len(file_buffer)
-                    while len(file_buffer) > 0:
-                        while True:
-                            js_send = {"type": "sending", "file_count": 1, "slice": readed}
-                            plog(f"Sendeding: {js_send} + data", 4)
-                            send_crypto_msg(sock, js_send, file_buffer)
-                            plog(f"Sended", 4)
-                            js, bs = recv_crypto_msg(sock)
-                            plog(f"Received js={js}", 4)
-                            if "type" not in js or js["type"] != "received":
-                                pout("Cannot send block. Trying again.")
-                            else:
-                                break
-                        file_buffer = fd.read(block_size)
-                        bar(len(file_buffer))
-                        bar(len(file_buffer))
-                        readed += len(file_buffer)
 
         pout(f"Calculating hash...")
         dir_hash = calc_hash_dir(dir_name)
@@ -225,41 +226,41 @@ def receive_dir(dir_name: str, meta: dict):
     plog(f"Dir will be received", 1)
     sock = Global.sock
     files = sorted(meta["files"].keys())
-    # !!! os.path.join
-    needed_dirs = get_dirs_needed_for_files(files)
+    files_4_dirs = [os.path.join(dir_name, file_i) for file_i in files]
+    needed_dirs = get_dirs_needed_for_files(files_4_dirs)
     for needed_dir_i in needed_dirs:
         mkdir_with_p(needed_dir_i)
-    for file_i in files:
-        file_name = os.path.join(dir_name, file_i)
-        with alive_bar(meta["dir_size"]) as bar:
+    with alive_bar(meta["dir_size"]) as bar:
+        for file_i in files:
+            # print(file_i)
+            # input()
+            file_name = os.path.join(dir_name, file_i)
             with open(file_name, "wb") as fd:
                 writed = 0
                 file_size = meta["files"][file_i]["size"]
                 plog(f"Receiving file size={file_size}", 1)
-                with alive_bar(file_size) as bar_file:
-                    while writed != file_size:
-                        while True:
-                            plog("Receiving file block", 4)
-                            js, file_buffer = recv_crypto_msg(sock)
-                            plog(f"Received file block {len(file_buffer)} bytes, js={js}", 4)
-                            if "type" not in js or js["type"] != "sending":
-                                pout(f"Cannot receive. Requesting the block again.")
-                                send_crypto_msg(sock, {"type": "error_again"}, b"")
-                                continue
-                            writed += len(file_buffer)
-                            if js["slice"] != writed:
-                                pout(f"Slice {js['slice']} dont same with writed {writed}. Exiting")
-                                Global.sock.close()
-                                exit()
-                            answer = {"type": "received"}
-                            plog(f"Sending answer={answer}", 4)
-                            send_crypto_msg(sock, answer, b"")
-                            plog(f"Sended", 4)
-                            fd.write(file_buffer)
-                            fd.flush()
-                            bar_file(len(file_buffer))
-                            bar(len(file_buffer))
-                            break
+                while writed != file_size:
+                    while True:
+                        plog("Receiving file block", 4)
+                        js, file_buffer = recv_crypto_msg(sock)
+                        plog(f"Received file block {len(file_buffer)} bytes, js={js}", 4)
+                        if "type" not in js or js["type"] != "sending":
+                            pout(f"Cannot receive. Requesting the block again.")
+                            send_crypto_msg(sock, {"type": "error_again"}, b"")
+                            continue
+                        writed += len(file_buffer)
+                        if js["slice"] != writed:
+                            pout(f"Slice {js['slice']} dont same with writed {writed}. Exiting")
+                            Global.sock.close()
+                            exit()
+                        answer = {"type": "received"}
+                        plog(f"Sending answer={answer}", 4)
+                        send_crypto_msg(sock, answer, b"")
+                        plog(f"Sended", 4)
+                        fd.write(file_buffer)
+                        fd.flush()
+                        bar(len(file_buffer))
+                        break
     pout(f"Receiving and calculating hash...")
     js, trash = recv_crypto_msg(sock)
     if "type" not in js or js["type"] != "hash":
