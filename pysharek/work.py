@@ -122,14 +122,14 @@ def send_dir(dir_name: str):
                     bar(len(file_buffer))
                     readed += len(file_buffer)
 
-        pout(f"Calculating hash...")
-        dir_hash = calc_hash_dir(dir_name)
-        pout(f"\"{dir_hash}\" is hash of dir \"{dir_name}\"")
-        plog(f"Sending file hash", 1)
-        hash_msg = {"type": "hash", "hash": f"{dir_hash}"}
-        plog(f"Hash message={hash_msg}", 4)
-        send_crypto_msg(sock, hash_msg, b"")
-        plog(f"Hash message sended", 4)
+    pout(f"Calculating hash...")
+    dir_hash = calc_hash_dir(dir_name, True)
+    pout(f"\"{dir_hash}\" is hash of dir \"{dir_name}\"")
+    plog(f"Sending file hash", 1)
+    hash_msg = {"type": "hash", "hash": f"{dir_hash}"}
+    plog(f"Hash message={hash_msg}", 4)
+    send_crypto_msg(sock, hash_msg, b"")
+    plog(f"Hash message sended", 4)
 
 
 def work_as_receiver(args: "argparse.Namespace"):
@@ -269,7 +269,7 @@ def receive_dir(dir_name: str, meta: dict):
         exit()
     recv_hash = js["hash"]
     pout(f"\"{recv_hash}\" is received hash")
-    dir_hash = calc_hash_dir(dir_name)
+    dir_hash = calc_hash_dir(dir_name, True)
     pout(f"\"{dir_hash}\" is hash of dir=\"{dir_name}\"")
     if recv_hash != dir_hash:
         pout(f"{'='*15} HASHES DOES NOT MATCH!!! {'='*15}")

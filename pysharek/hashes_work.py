@@ -37,7 +37,7 @@ def calc_hash_dir(dir_path: str, if_hierarchy=True) -> str:
     files_rel = [os.path.relpath(file_i, dir_path) for file_i in files]
     sha = hashlib.sha256()
     if if_hierarchy:
-        for file_i in files:
+        for file_i in files_rel:
             sha.update(file_i.encode("utf-8"))
 
     dir_size = get_dir_size(dir_path)
