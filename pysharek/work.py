@@ -11,7 +11,6 @@ import time
 
 from .sup import *
 from .net import *
-from .crypto import PycaAES256CBC
 from .hashes_work import calc_hash_file
 from .hashes_work import calc_hash_dir
 from .sup import get_dirs_needed_for_files
@@ -237,8 +236,13 @@ def receive_file(file_name: str, meta: dict):
 
 
 def receive_dir(dir_name: str, meta: dict):
-    # TODO: check if dir exists and if this not empty
     dir_name = os.path.abspath(dir_name)
+    if Global.yes_always == False:
+        if len(get_files_list(dir_name)) != 0:
+            user_in = input(f"Directory \"{dir_name}\" is not empty!!! Continue? (Y): ")
+            if user_in.strip().lower() not in ["", "y", "1", "yes", "yep"]:
+                exit()
+
     plog(f"Dir will be received", 1)
     sock = Global.sock
     files = sorted(meta["files"].keys())

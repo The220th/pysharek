@@ -13,6 +13,7 @@ class Global:
     outfile = None
     logfile = None
     log_debug = None
+    yes_always = None
     file_dir = None
     sock: "socket" = None
     cipher: "PycaAES256CBC or PycaFernet" = None

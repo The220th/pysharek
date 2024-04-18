@@ -20,7 +20,7 @@ def create_and_init_parser() -> "argparse.ArgumentParser":
                         help="if \"log_file\" defined, lvl DEBUG will be logged")
 
     parser.add_argument("--version", action="version", version=f"V{Global.version}",
-                        help="Check version of diwork")
+                        help="Check version of pysharek")
 
     parser.add_argument("--connect", type=str, choices=["server", "client"], required=True,
                         help="Usage as server or client")
@@ -40,6 +40,8 @@ def create_and_init_parser() -> "argparse.ArgumentParser":
     parser.add_argument("--password", type=str, required=True,
                         help="Define password for encryption while transferring. "
                              "Password must be same for the sender and receiver")
+    parser.add_argument("--yes", default=False, required=False, action="store_true",
+                        help="Answer \"yes\" on any questions")
 
     return parser
 
@@ -48,3 +50,4 @@ def common_parse(args: "argparse.Namespace") -> None:
     Global.outfile = args.dublicate_out_to_file
     Global.logfile = args.log_file
     Global.log_debug = args.log_debug
+    Global.yes_always = args.yes
