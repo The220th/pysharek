@@ -19,6 +19,7 @@ class Global:
     cipher: "PycaAES256CBC or PycaFernet" = None
     file_size_4_message = 262144  # 256 KB  # 1048576  # 1 MB
     hash_4_thread = None
+    continue_from = None
 
 
 def pout(msg: str, endl=True):
@@ -55,6 +56,8 @@ def plog(s: str, _type: int = 1):
         prefix = "DEBUG"
     elif _type == 5:
         prefix = "OUTPUT"
+    elif _type == 6:
+        prefix = "SLICING"
     if Global.logfile is not None:
         if not Global.log_debug and prefix == "DEBUG":
             return

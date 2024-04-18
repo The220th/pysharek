@@ -42,6 +42,8 @@ def create_and_init_parser() -> "argparse.ArgumentParser":
                              "Password must be same for the sender and receiver")
     parser.add_argument("--yes", default=False, required=False, action="store_true",
                         help="Answer \"yes\" on any questions")
+    parser.add_argument("--continue_from", type=str, required=False, default=None,
+                        help="continue from {file}:{block}.")
 
     return parser
 
@@ -51,3 +53,10 @@ def common_parse(args: "argparse.Namespace") -> None:
     Global.logfile = args.log_file
     Global.log_debug = args.log_debug
     Global.yes_always = args.yes
+
+    if args.continue_from is not None:
+        continue_f, continue_s = args.continue_from.strip().lower().split(":")
+        continue_f, continue_s = int(continue_f), int(continue_s)
+        Global.continue_from = (continue_f, continue_s)
+    else:
+        Global.continue_from = None
