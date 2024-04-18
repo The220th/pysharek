@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pysharek"
-version = "0.10.0"
+dynamic = ["version"]
 authors = [
   { name="The220th", email="author@example.com" },
 ]
@@ -23,7 +23,8 @@ dependencies = [
 ]
 
 # [metadata]
-# version = attr: package.version.__version__
+[tool.setuptools.dynamic]
+version = {attr = "pysharek.__version__"}
 # https://github.com/pypa/setuptools/issues/2530#issuecomment-1135391647
 
 # [console_scripts]

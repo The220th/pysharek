@@ -6,6 +6,8 @@ import io
 import json
 import argparse
 import hashlib
+import threading
+import time
 
 from .sup import *
 from .net import *
@@ -34,6 +36,14 @@ def work_as_sender(args: "argparse.Namespace"):
         pout(f"Failed successfully (what is file \"{file}\")")
         Global.sock.close()
         exit()
+
+
+def calc_hash_4_thread(path: str, dir_file: bool):
+    if dir_file == False:
+        calculated_hash = calc_hash_dir(path, True)
+    else:
+        calculated_hash = calc_hash_file(path)
+    Global.hash_4_thread = calculated_hash
 
 
 def send_file(file_name: str):
@@ -203,6 +213,10 @@ def receive_file(file_name: str, meta: dict):
                     bar(len(file_buffer))
                     break
     pout(f"Receiving and calculating hash...")
+
+    x = threading.Thread(target=calc_hash_4_thread, args=(file, True))
+    x.start()
+
     js, trash = recv_crypto_msg(sock)
     if "type" not in js or js["type"] != "hash":
         pout(f"Cannot receive hash. Exiting")
@@ -210,7 +224,10 @@ def receive_file(file_name: str, meta: dict):
         exit()
     recv_hash = js["hash"]
     pout(f"\"{recv_hash}\" is received hash")
-    file_hash = calc_hash_file(file)
+    # file_hash = calc_hash_file(file)
+    while Global.hash_4_thread is None:
+        time.sleep(1.0)  # Dude, what is join?
+    file_hash = Global.hash_4_thread
     pout(f"\"{file_hash}\" is hash of file=\"{file}\"")
     if recv_hash != file_hash:
         pout(f"{'='*15} HASHES DOES NOT MATCH!!! {'='*15}")
@@ -260,15 +277,23 @@ def receive_dir(dir_name: str, meta: dict):
                         bar(len(file_buffer))
                         break
     pout(f"Receiving and calculating hash...")
+
+    x = threading.Thread(target=calc_hash_4_thread, args=(dir_name, False))
+    x.start()
+
     js, trash = recv_crypto_msg(sock)
     if "type" not in js or js["type"] != "hash":
         pout(f"Cannot receive hash. Exiting")
         Global.sock.close()
         exit()
     recv_hash = js["hash"]
-    pout(f"\"{recv_hash}\" is received hash")
-    dir_hash = calc_hash_dir(dir_name, True)
+    pout(f"\n\"{recv_hash}\" is received hash")
+    # dir_hash = calc_hash_dir(dir_name, True)
+    while Global.hash_4_thread is None:
+        time.sleep(1.0)  # Dude, what is join?
+    dir_hash = Global.hash_4_thread
     pout(f"\"{dir_hash}\" is hash of dir=\"{dir_name}\"")
+
     if recv_hash != dir_hash:
         pout(f"{'='*15} HASHES DOES NOT MATCH!!! {'='*15}")
     else:

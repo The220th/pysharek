@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# pip3 install build
-# python3 -m build
-# python3 -m pip install --upgrade twine
-# python3 -m twine upload --repository testpypi dist/*
-# pip3 install pysharek --no-deps --index-url https://test.pypi.org/simple
-
 import os
 import sys
 
@@ -18,10 +12,11 @@ from .net import *
 from .args import *
 from .work import work_as_sender, work_as_receiver
 from .crypto import PycaAES256CBC, PycaFernet
+from . import __version__
 
 
 def main():
-    Global.version = "0.10"
+    Global.version = __version__
 
     parser = create_and_init_parser()
     args = parser.parse_args(sys.argv[1:])

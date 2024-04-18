@@ -17,6 +17,7 @@ class Global:
     sock: "socket" = None
     cipher: "PycaAES256CBC or PycaFernet" = None
     file_size_4_message = 262144  # 256 KB  # 1048576  # 1 MB
+    hash_4_thread = None
 
 
 def pout(msg: str, endl=True):
