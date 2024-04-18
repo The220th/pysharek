@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import threading
 import time
+import traceback
 
 from .sup import *
 from .net import *
@@ -102,16 +103,24 @@ def send_dir(dir_name: str):
         plog("Sending meta...", 1)
         send_crypto_msg(sock, meta, b"")
         plog("Meta sended!", 1)
-        with alive_bar(meta["dir_size"]) as bar:
+        dir_size = meta["dir_size"]
+        pout(f"{get_nice_size(dir_size)} will be sended")
+        with alive_bar(dir_size) as bar:
             for file_i in files:
                 file_gi += 1
                 slice_gi = 0
+                file_size = meta["files"][file_i]["size"]
                 if Global.continue_from is not None:
                     if file_gi < Global.continue_from[0]:
+                        bar(file_size)
                         continue
                 file = os.path.join(dir_name, file_i)
                 with open(file, "rb") as fd:
-                    file_size = meta["files"][file_i]["size"]
+                    if Global.continue_from is not None:
+                        if file_gi < Global.continue_from[0]:
+                            skip_bytes = Global.file_size_4_message*Global.continue_from[1]
+                            fd.seek(skip_bytes)
+                            bar(skip_bytes)
                     plog(f"File size {file_size} bytes", 4)
                     readed = 0
                     block_size = Global.file_size_4_message
@@ -138,6 +147,7 @@ def send_dir(dir_name: str):
                         readed += len(file_buffer)
     except Exception as e:  # TODO: catch CTRL+C
         pout(f"Error: {e}")
+        traceback.print_exc()
         pout(f"Last slising: {file_gi}:{slice_gi}")
         exit(1)
 
@@ -264,17 +274,25 @@ def receive_dir(dir_name: str, meta: dict):
         needed_dirs = get_dirs_needed_for_files(files_4_dirs)
         for needed_dir_i in needed_dirs:
             mkdir_with_p(needed_dir_i)
-        with alive_bar(meta["dir_size"]) as bar:
+        dir_size = meta["dir_size"]
+        pout(f"{get_nice_size(dir_size)} will be sended")
+        with alive_bar(dir_size) as bar:
             for file_i in files:
                 file_gi += 1
                 slice_gi = 0
+                file_size = meta["files"][file_i]["size"]
                 if Global.continue_from is not None:
                     if file_gi < Global.continue_from[0]:
+                        bar(file_size)
                         continue
                 file_name = os.path.join(dir_name, file_i)
                 with open(file_name, "wb") as fd:
+                    if Global.continue_from is not None:
+                        if file_gi < Global.continue_from[0]:
+                            skip_bytes = Global.file_size_4_message * Global.continue_from[1]
+                            fd.seek(skip_bytes)
+                            bar(skip_bytes)
                     writed = 0
-                    file_size = meta["files"][file_i]["size"]
                     plog(f"Receiving file size={file_size}", 1)
                     while writed != file_size:
                         while True:
@@ -302,6 +320,7 @@ def receive_dir(dir_name: str, meta: dict):
                             break
     except Exception as e:  # TODO: catch CTRL+C
         pout(f"Error: {e}")
+        traceback.print_exc()
         pout(f"Last slising: {file_gi}:{slice_gi}")
         exit(1)
 
