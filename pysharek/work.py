@@ -102,7 +102,7 @@ def send_dir(dir_name: str):
     send_crypto_msg(sock, meta, b"")
     plog("Meta sended!", 1)
     with alive_bar(meta["dir_size"]) as bar:
-        for file_i in files:
+        for file_i_num, file_i in enumerate(files):
             # print(file_i)
             # input()
             file = os.path.join(dir_name, file_i)
@@ -116,7 +116,7 @@ def send_dir(dir_name: str):
                 readed += len(file_buffer)
                 while len(file_buffer) > 0:
                     while True:
-                        js_send = {"type": "sending", "file_count": 1, "slice": readed}
+                        js_send = {"type": "sending", "file_num": file_i_num, "slice": readed}
                         plog(f"Sendeding: {js_send} + data", 4)
                         send_crypto_msg(sock, js_send, file_buffer)
                         plog(f"Sended", 4)
@@ -229,6 +229,7 @@ def receive_file(file_name: str, meta: dict):
         time.sleep(1.0)  # Dude, what is join?
     file_hash = Global.hash_4_thread
     pout(f"\"{file_hash}\" is hash of file=\"{file}\"")
+    pout(f"Comparing hashes: \"{recv_hash}\" (recieved) vs \"{file_hash}\" (calculating)")
     if recv_hash != file_hash:
         pout(f"{'='*15} HASHES DOES NOT MATCH!!! {'='*15}")
     else:
@@ -293,7 +294,7 @@ def receive_dir(dir_name: str, meta: dict):
         time.sleep(1.0)  # Dude, what is join?
     dir_hash = Global.hash_4_thread
     pout(f"\"{dir_hash}\" is hash of dir=\"{dir_name}\"")
-
+    pout(f"Comparing hashes: \"{recv_hash}\" (recieved) vs \"{dir_hash}\" (calculating)")
     if recv_hash != dir_hash:
         pout(f"{'='*15} HASHES DOES NOT MATCH!!! {'='*15}")
     else:
