@@ -21,6 +21,11 @@ class Global:
     hash_4_thread = None
     continue_from = None
 
+    priv_key = None
+    pub_key = None
+    pub_key_2 = None
+    shared_key = None
+
 
 def pout(msg: str, endl=True):
     if not endl:

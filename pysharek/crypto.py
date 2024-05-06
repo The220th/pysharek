@@ -9,10 +9,6 @@ from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from cryptography.hazmat.primitives.asymmetric.x448 import X448PublicKey
-from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
-from cryptography.hazmat.primitives import serialization
-
 from sup import get_random_string
 
 
@@ -215,6 +211,10 @@ def takeout_salt(data: bytes) -> bytes:
     return bytes(res)
 
 
+def transfer_shared_key(shared_key: bytes) -> str:
+    return hashlib.sha256(shared_key).hexdigest()
+
+
 def __test_salt():
     import random
     from alive_progress import alive_bar
@@ -251,6 +251,10 @@ def __test_cipher():
 
 
 def __test_key_exchange():
+    from cryptography.hazmat.primitives.asymmetric.x448 import X448PublicKey
+    from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
+    from cryptography.hazmat.primitives import serialization
+
     private_key1 = X448PrivateKey.generate()
     public_key1 = private_key1.public_key()
     public_key1_bytes = public_key1.public_bytes(encoding=serialization.Encoding.Raw,

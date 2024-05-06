@@ -15,6 +15,7 @@ from .net import *
 from .hashes_work import calc_hash_file
 from .hashes_work import calc_hash_dir
 from .sup import get_dirs_needed_for_files
+from .crypto import transfer_shared_key
 
 
 def work_as_sender(args: "argparse.Namespace"):
@@ -355,7 +356,39 @@ def common_block_of_sender_and_receiver(args: "argparse.Namespace"):
     plog(f"Handshaked", 1)
     Global.sock = sock
 
-    Global.cipher.set_password(args.password)
+    if args.password is None:
+        from cryptography.hazmat.primitives.asymmetric.x448 import X448PublicKey
+        from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
+        from cryptography.hazmat.primitives import serialization
+
+        Global.priv_key = X448PrivateKey.generate()
+        Global.pub_key = Global.priv_key.public_key()
+        Global.pub_key = Global.pub_key.public_bytes(encoding=serialization.Encoding.Raw,
+                                                     format=serialization.PublicFormat.Raw)
+        pub_key_2 = None
+        if args.connect == "server":  # TODO: remove args.* == *
+            send_msg(sock, {"key_exchange": "1"}, Global.pub_key)
+            d, pub_key_2 = recv_msg(sock)
+            if "key_exchange" not in d or d["key_exchange"] != "2":
+                pout("Cannot key_exchange-2")
+                plog("Cannot key_exchange-2")
+                socket_close(sock)
+                exit()
+        elif args.connect == "client":
+            d, pub_key_2 = recv_msg(sock)
+            if "key_exchange" not in d or d["key_exchange"] != "1":
+                pout("Cannot key_exchange-1")
+                plog("Cannot key_exchange-1")
+                socket_close(sock)
+                exit()
+            else:
+                send_msg(sock, {"key_exchange": "2"}, Global.pub_key)
+        Global.pub_key_2 = pub_key_2
+        Global.shared_key = Global.priv_key.exchange(X448PublicKey.from_public_bytes(Global.pub_key_2))
+        Global.shared_key = transfer_shared_key(Global.shared_key)
+        Global.cipher.set_password(Global.shared_key)
+    else:
+        Global.cipher.set_password(args.password)
     Global.cipher.start()
 
     plog(f"Inited cipher in common part", 1)

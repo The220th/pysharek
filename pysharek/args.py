@@ -37,7 +37,7 @@ def create_and_init_parser() -> "argparse.ArgumentParser":
     parser.add_argument("--port", type=int, required=True,
                         help="Define port for bind/connect")
 
-    parser.add_argument("--password", type=str, required=True,
+    parser.add_argument("--password", type=str, required=False,
                         help="Define password for encryption while transferring. "
                              "Password must be same for the sender and receiver")
     parser.add_argument("--yes", default=False, required=False, action="store_true",
