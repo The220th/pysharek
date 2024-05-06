@@ -14,8 +14,9 @@ from .sup import *
 from .net import *
 from .hashes_work import calc_hash_file
 from .hashes_work import calc_hash_dir
-from .sup import get_dirs_needed_for_files
 from .crypto import transfer_shared_key
+
+from .vs_man_on_middle import challenge_with_words
 
 
 def work_as_sender(args: "argparse.Namespace"):
@@ -386,6 +387,7 @@ def common_block_of_sender_and_receiver(args: "argparse.Namespace"):
         Global.pub_key_2 = pub_key_2
         Global.shared_key = Global.priv_key.exchange(X448PublicKey.from_public_bytes(Global.pub_key_2))
         Global.shared_key = transfer_shared_key(Global.shared_key)
+        challenge_with_words(Global.shared_key)
         Global.cipher.set_password(Global.shared_key)
     else:
         Global.cipher.set_password(args.password)
