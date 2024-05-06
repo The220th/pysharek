@@ -9,6 +9,10 @@ from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
+from cryptography.hazmat.primitives.asymmetric.x448 import X448PublicKey
+from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
+from cryptography.hazmat.primitives import serialization
+
 from sup import get_random_string
 
 
@@ -246,6 +250,42 @@ def __test_cipher():
             bar()
 
 
+def __test_key_exchange():
+    private_key1 = X448PrivateKey.generate()
+    public_key1 = private_key1.public_key()
+    public_key1_bytes = public_key1.public_bytes(encoding=serialization.Encoding.Raw,
+                                                 format=serialization.PublicFormat.Raw)
+    print(f"Pub key 1 bytes: {public_key1_bytes}")
+    public_key1_text = base64.b64encode(public_key1_bytes).decode("ascii")
+    print(f"Pub key 1: {public_key1_text}")
+
+    private_key2 = X448PrivateKey.generate()
+    public_key2 = private_key2.public_key()
+    public_key2_bytes = public_key2.public_bytes(encoding=serialization.Encoding.Raw,
+                                                 format=serialization.PublicFormat.Raw)
+
+    print(f"Pub key 2 bytes: {public_key2_bytes}")
+    public_key2_text = base64.b64encode(public_key2_bytes).decode("ascii")
+    print(f"Pub key 2: {public_key2_text}")
+
+    # =============================
+
+    pubkey1_bytes = base64.b64decode(public_key1_text.encode("ascii"))
+    pubkey1 = X448PublicKey.from_public_bytes(pubkey1_bytes)
+
+    pubkey2_bytes = base64.b64decode(public_key2_text.encode("ascii"))
+    pubkey2 = X448PublicKey.from_public_bytes(pubkey2_bytes)
+
+    shared_key1 = private_key2.exchange(pubkey1)
+    shared_key1 = base64.b64encode(shared_key1).decode("ascii")
+    print(f"shared_key1: {shared_key1}")
+
+    shared_key2 = private_key1.exchange(pubkey2)
+    shared_key2 = base64.b64encode(shared_key2).decode("ascii")
+    print(f"shared_key2: {shared_key2}")
+
+
 if __name__ == "__main__":
     # __test_salt()
-    __test_cipher()
+    # __test_cipher()
+    __test_key_exchange()
