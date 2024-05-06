@@ -156,10 +156,14 @@ def get_nice_size(size_bytes: int) -> str:
     if size_bytes < 1024:
         return f"{size_bytes} B"
     elif size_bytes < 1024*1024:
-        return f"{size_bytes // 1024} KB"
+        devider = 1024
+        return f"{round(size_bytes / devider, 3)} KB"
     elif size_bytes < 1024*1024*1024:
-        return f"{size_bytes // (1024*1024)} MB"
+        devider = 1024*1024
+        return f"{round(size_bytes / devider, 3)} MB"
     elif size_bytes < 1024*1024*1024*1024:
-        return f"{size_bytes // (1024*1024*1024)} GB"
+        devider = 1024*1024*1024
+        return f"{round(size_bytes / devider, 3)} GB"
     else:
-        return f"{size_bytes // (1024*1024*1024*1024)} TB"
+        devider = 1024*1024*1024*1024
+        return f"{round(size_bytes / devider, 3)} TB"
